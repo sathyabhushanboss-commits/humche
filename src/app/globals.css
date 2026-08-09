@@ -1,0 +1,177 @@
+@import "tailwindcss";
+@import "@fontsource/fraunces/400.css";
+@import "@fontsource/fraunces/500.css";
+@import "@fontsource/fraunces/600.css";
+@import "@fontsource/fraunces/700.css";
+@import "@fontsource/fraunces/900.css";
+@import "@fontsource/fraunces/600-italic.css";
+@import "@fontsource/fraunces/500-italic.css";
+@import "@fontsource/work-sans/400.css";
+@import "@fontsource/work-sans/500.css";
+@import "@fontsource/work-sans/600.css";
+@import "@fontsource/work-sans/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+:root {
+  --forest: #1b5e20;
+  --forest-deep: #0f3d13;
+  --leaf: #2e7d32;
+  --brown: #5d4037;
+  --brown-deep: #3c281f;
+  --cream: #f5ebd7;
+  --cream-soft: #faf5e9;
+  --white: #ffffff;
+  --clay: #a9793f;
+  --ink: #241a12;
+
+  --font-display: "Fraunces", "Georgia", serif;
+  --font-body: "Work Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
+}
+
+@theme inline {
+  --color-forest: var(--forest);
+  --color-forest-deep: var(--forest-deep);
+  --color-leaf: var(--leaf);
+  --color-brown: var(--brown);
+  --color-brown-deep: var(--brown-deep);
+  --color-cream: var(--cream);
+  --color-cream-soft: var(--cream-soft);
+  --color-clay: var(--clay);
+  --color-ink: var(--ink);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--forest);
+  color: var(--cream);
+}
+
+/* Ruled-paper texture: faint horizontal lines, like a field notebook page */
+.ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(93, 64, 55, 0.07) 0px,
+    rgba(93, 64, 55, 0.07) 1px,
+    transparent 1px,
+    transparent 42px
+  );
+}
+
+.paper-grain {
+  position: relative;
+}
+.paper-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.36  0 0 0 0 0.25  0 0 0 0 0.16  0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+/* Rotating stamp / seal badge — signature element */
+.stamp {
+  animation: spin-slow 26s linear infinite;
+  transform-origin: 50% 50%;
+}
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stamp {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* Reveal-on-scroll */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Focus visibility */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 3px;
+}
+
+.hairline {
+  border-color: rgba(93, 64, 55, 0.22);
+}
+
+.underline-grow {
+  position: relative;
+  text-decoration: none;
+}
+.underline-grow::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s ease;
+}
+.underline-grow:hover::after,
+.underline-grow:focus-visible::after {
+  transform: scaleX(1);
+}
