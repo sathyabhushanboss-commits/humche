@@ -175,3 +175,18 @@ textarea:focus-visible {
 .underline-grow:focus-visible::after {
   transform: scaleX(1);
 }
+
+
+@theme {
+  --animate-marquee: marquee 22s linear infinite;
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(0%);
+    }
+
+    100% {
+      transform: translateX(-33.333%);
+    }
+  }
+}

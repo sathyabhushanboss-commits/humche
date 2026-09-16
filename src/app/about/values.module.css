@@ -1,0 +1,185 @@
+.valueCard {
+  border: 1px solid rgba(93, 64, 55, 0.14);
+  animation: cardGlow 6s ease-in-out infinite;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.valueCard:hover {
+  transform: translateY(-6px);
+}
+@keyframes cardGlow {
+  0%, 100% {
+    border-color: rgba(93, 64, 55, 0.14);
+    box-shadow: 0 0 0 rgba(176, 141, 87, 0);
+  }
+  50% {
+    border-color: rgba(176, 141, 87, 0.45);
+    box-shadow: 0 8px 24px rgba(93, 64, 55, 0.08);
+  }
+}
+
+.ghostNumeral {
+  position: absolute;
+  top: -18px;
+  right: 6px;
+  font-size: 120px;
+  line-height: 1;
+  font-weight: 600;
+  color: rgba(93, 64, 55, 0.06);
+  animation: numeralFloat 8s ease-in-out infinite;
+  pointer-events: none;
+  user-select: none;
+}
+@keyframes numeralFloat {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(-10px); opacity: 0.6; }
+}
+
+.iconWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+.ringOuter {
+  inset: -12px;
+  border: 1px dashed rgba(176, 141, 87, 0.25);
+  animation: spinSlow 26s linear infinite;
+}
+.ringInner {
+  inset: -5px;
+  border: 1px dashed rgba(176, 141, 87, 0.4);
+  animation: spinReverse 16s linear infinite;
+}
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes spinReverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.iconCore {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  border-radius: 9999px;
+  border: 1px solid #B08D57;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 235, 215, 0.6);
+  animation: iconBob 4s ease-in-out infinite, ringPulse 3s ease-in-out infinite;
+}
+@keyframes iconBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes ringPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(176, 141, 87, 0.25); }
+  50% { box-shadow: 0 0 0 6px rgba(176, 141, 87, 0); }
+}
+
+.bracket {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  animation: bracketPulse 3s ease-in-out infinite;
+}
+.bracketTl {
+  top: 12px;
+  left: 12px;
+  border-top: 1px solid #B08D57;
+  border-left: 1px solid #B08D57;
+}
+.bracketBr {
+  bottom: 12px;
+  right: 12px;
+  border-bottom: 1px solid #B08D57;
+  border-right: 1px solid #B08D57;
+}
+@keyframes bracketPulse {
+  0%, 100% { opacity: 0.25; width: 14px; height: 14px; }
+  50% { opacity: 0.8; width: 20px; height: 20px; }
+}
+.valueCard:hover .bracket {
+  opacity: 0.9;
+}
+
+.goldRule {
+  position: relative;
+  display: block;
+  height: 1px;
+  margin: 12px 0 20px;
+  background: #B08D57;
+  overflow: hidden;
+  animation: ruleBreathe 5s ease-in-out infinite;
+}
+@keyframes ruleBreathe {
+  0%, 100% { width: 28px; }
+  50% { width: 44px; }
+}
+.goldRuleShine {
+  position: absolute;
+  top: 0;
+  left: -40px;
+  width: 40px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent);
+  animation: shineSweep 4s ease-in-out infinite;
+}
+@keyframes shineSweep {
+  0% { left: -40px; }
+  60%, 100% { left: 100%; }
+}
+
+.kickerDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #B08D57;
+  animation: dotPulse 2.4s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+
+.particle {
+  position: absolute;
+  bottom: 18px;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: #B08D57;
+  opacity: 0;
+  animation: particleRise 4.5s ease-in infinite;
+}
+@keyframes particleRise {
+  0% { opacity: 0; transform: translateY(0); }
+  15% { opacity: 0.6; }
+  80% { opacity: 0.3; }
+  100% { opacity: 0; transform: translateY(-60px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .valueCard,
+  .ghostNumeral,
+  .ringOuter,
+  .ringInner,
+  .iconCore,
+  .bracket,
+  .goldRule,
+  .goldRuleShine,
+  .kickerDot,
+  .particle {
+    animation: none !important;
+  }
+}

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { Footprints, BookOpen, TreePine } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import Reveal from "@/components/Reveal";
 import LeafDivider from "@/components/LeafDivider";
 import { audiences } from "@/lib/site";
+import styles from "./values.module.css";
 
 export const metadata: Metadata = {
   title: "About",
@@ -10,18 +12,26 @@ export const metadata: Metadata = {
     "Hamche Culture connects people with the heritage of the Siddi Community, nature, and sustainable living through immersive cultural and educational experiences.",
 };
 
+const GOLD = "#B08D57";
+
 const values = [
   {
+    numeral: "I",
     label: "Experience",
     text: "We don't lecture — we walk, sit, cook, and listen alongside the community and the forest.",
+    icon: Footprints,
   },
   {
+    numeral: "II",
     label: "Learn",
     text: "Every visit is built around real knowledge: native ecology, sustainable farming, and living culture.",
+    icon: BookOpen,
   },
   {
+    numeral: "III",
     label: "Connect with Nature",
     text: "The forest is not a backdrop. It's a teacher, and we move through it on its terms.",
+    icon: TreePine,
   },
 ];
 
@@ -56,20 +66,68 @@ export default function About() {
           </p>
         </Reveal>
 
-        <div className="mt-16 grid sm:grid-cols-3 gap-px bg-brown/15 border hairline rounded-2xl overflow-hidden">
-          {values.map((v, i) => (
-            <Reveal key={v.label} delay={i * 80}>
-              <div className="bg-cream-soft h-full p-8">
-                <p className="font-mono text-xs text-clay">{`0${i + 1}`}</p>
-                <h3 className="mt-3 font-display text-xl text-brown-deep font-semibold">
-                  {v.label}
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-ink/70">
-                  {v.text}
-                </p>
-              </div>
-            </Reveal>
-          ))}
+        <Reveal delay={80}>
+          <p className="mt-20 mb-10 font-display italic text-lg text-brown-deep/70 flex items-center gap-3">
+            <span className={styles.kickerDot} />
+            The Hamche way
+          </p>
+        </Reveal>
+
+        <div className="grid sm:grid-cols-3 gap-8">
+          {values.map((v, i) => {
+            const Icon = v.icon;
+            return (
+              <Reveal key={v.label} delay={i * 120}>
+                <div
+                  className={`${styles.valueCard} group relative h-full bg-cream-soft overflow-hidden`}
+                  style={{ padding: "3rem 2.25rem 2.75rem" }}
+                >
+                  <span
+                    className={`${styles.ghostNumeral} font-display`}
+                    style={{ animationDelay: `${i * 0.9}s` }}
+                  >
+                    {v.numeral}
+                  </span>
+
+                  <span className={styles.particle} style={{ left: 20, animationDelay: `${i * 0.7}s` }} />
+                  <span className={styles.particle} style={{ left: 42, animationDelay: `${i * 0.7 + 1.4}s` }} />
+                  <span className={styles.particle} style={{ left: 64, animationDelay: `${i * 0.7 + 2.6}s` }} />
+
+                  <span
+                    className={`${styles.bracket} ${styles.bracketTl}`}
+                    style={{ animationDelay: `${i * 0.4}s` }}
+                  />
+                  <span
+                    className={`${styles.bracket} ${styles.bracketBr}`}
+                    style={{ animationDelay: `${i * 0.4 + 1.5}s` }}
+                  />
+
+                  <div
+                    className={styles.iconWrap}
+                    style={{ width: 46, height: 46, animationDelay: `${i * 0.5}s` }}
+                  >
+                    <span className={`${styles.ring} ${styles.ringOuter}`} style={{ animationDelay: `${i * 0.3}s` }} />
+                    <span className={`${styles.ring} ${styles.ringInner}`} style={{ animationDelay: `${i * 0.3}s` }} />
+                    <span className={styles.iconCore} style={{ animationDelay: `${i * 0.5}s` }}>
+                      <Icon size={18} strokeWidth={1.25} style={{ color: GOLD }} />
+                    </span>
+                  </div>
+
+                  <h3 className="relative mt-8 font-display text-2xl text-brown-deep font-semibold">
+                    {v.label}
+                  </h3>
+
+                  <span className={styles.goldRule} style={{ animationDelay: `${i * 0.4}s` }}>
+                    <span className={styles.goldRuleShine} />
+                  </span>
+
+                  <p className="relative text-[0.95rem] leading-[1.8] text-ink/65">
+                    {v.text}
+                  </p>
+                </div>
+              </Reveal>
+            );
+          })}
         </div>
       </section>
 
