@@ -1,482 +1,143 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
-  TreePine,
-  Sprout,
-  Users,
-  Music,
-  Utensils,
-  Home as HomeIcon,
   BookOpen,
-  GraduationCap,
   CalendarDays,
+  GraduationCap,
+  Home as HomeIcon,
   MapPin,
+  Music,
+  Sprout,
+  TreePine,
+  Users,
+  Utensils,
 } from "lucide-react";
-import Stamp from "@/components/Stamp";
-import LeafDivider from "@/components/LeafDivider";
-import Reveal from "@/components/Reveal";
 
-/* ------------------------------------------------------------------ */
-/* INLINE FX HELPERS (marquee / parallax / counter)                    */
-/* ------------------------------------------------------------------ */
+/* ================================================================
+   HAMCHE CULTURE — HOME PAGE
+   Clean replacement for src/app/page.tsx
 
-function Marquee({ items, tone = "clay" }: { items: string[]; tone?: "clay" | "forest" }) {
-  const bg = tone === "forest" ? "bg-forest" : "bg-clay";
-  return (
-    <div className={`relative overflow-hidden ${bg} text-cream-soft py-4 -rotate-1 shadow-xl`}>
-      <div className="flex whitespace-nowrap animate-marquee">
-        {[...items, ...items, ...items].map((item, i) => (
-          <span key={i} className="mx-6 flex items-center gap-6 font-display text-lg md:text-xl uppercase tracking-wide">
-            {item}
-            <span className="text-cream-soft/50">✦</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
+   Images expected in:
+   public/images/
+     hero_section.jpeg
+     hero_section_2.jpeg
+     hero_section_3.jpeg
+     hero_section_4.jpeg
+     hero_section_5.jpeg
+     n1.jpeg
+     n2.jpeg
+     n3.jpeg
+     n4.jpeg
+     n5.jpeg
+     n6.jpeg
+================================================================ */
 
-function ParallaxBlob({ speed = 0.15, className = "" }: { speed?: number; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [offset, setOffset] = useState(0);
-
-  useEffect(() => {
-    const onScroll = () => {
-      if (!ref.current) return;
-      const rect = ref.current.getBoundingClientRect();
-      const centerDelta = rect.top - window.innerHeight / 2;
-      setOffset(centerDelta * speed);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [speed]);
-
-  return (
-    <div
-      ref={ref}
-      style={{ transform: `translateY(${offset}px)` }}
-      className={`pointer-events-none absolute rounded-full blur-3xl will-change-transform ${className}`}
-    />
-  );
-}
-
-function Counter({ to, suffix = "", duration = 1400 }: { to: number; suffix?: string; duration?: number }) {
-  const [value, setValue] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const started = useRef(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          const start = performance.now();
-          const tick = (now: number) => {
-            const progress = Math.min((now - start) / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            setValue(Math.round(eased * to));
-            if (progress < 1) requestAnimationFrame(tick);
-          };
-          requestAnimationFrame(tick);
-        }
-      },
-      { threshold: 0.4 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [to, duration]);
-
-  return (
-    <span ref={ref}>
-      {value}
-      {suffix}
-    </span>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* STACK LOOP — animated "Experience / Learn / Connect" card stack     */
-/* ------------------------------------------------------------------ */
-
-const stackPalette = {
-  cream: "#F7F0E2",
-  creamSoft: "#F0E6D2",
-  brownDeep: "#2E2016",
-  brown: "#5B4632",
-  forest: "#14532D",
-  forestDeep: "#0B3A1F",
-  forestLight: "#4F9A6B",
-  clay: "#C46A3B",
-  ink: "#2E2016",
-};
-
-const stackSteps = [
-  {
-    num: "01",
-    title: "Experience",
-    copy: "Come close enough to participate — in food, music, farming, stories and everyday village life.",
-    Icon: Users,
-  },
-  {
-    num: "02",
-    title: "Learn",
-    copy: "Move beyond observation. Learn the knowledge carried through generations, from agriculture and food to community and craft.",
-    Icon: BookOpen,
-  },
-  {
-    num: "03",
-    title: "Connect with Nature",
-    copy: "Walk the forest, understand the land, and see how nature shapes everyday life here.",
-    Icon: TreePine,
-  },
+const heroImages = [
+  "/images/hero_section.jpeg",
+  "/images/hero_section_2.jpeg",
+  "/images/hero_section_3.jpeg",
+  "/images/hero_section_4.jpeg",
+  "/images/hero_section_5.jpeg",
 ];
 
-const STACK_DURATION = 4200; // ms per slide
-const STACK_TOTAL = stackSteps.length;
-
-function StackLoop() {
-  const [active, setActive] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const rafRef = useRef<number | null>(null);
-  const startRef = useRef<number | null>(null);
-  const pausedRef = useRef(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduceMotion(mq.matches);
-    const fn = (e: MediaQueryListEvent) => setReduceMotion(e.matches);
-    mq.addEventListener?.("change", fn);
-    return () => mq.removeEventListener?.("change", fn);
-  }, []);
-
-  useEffect(() => {
-    pausedRef.current = paused;
-  }, [paused]);
-
-  const advance = useCallback(() => {
-    setActive((a) => (a + 1) % STACK_TOTAL);
-    setProgress(0);
-    startRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    if (reduceMotion) return undefined;
-
-    const tick = (t: number) => {
-      if (pausedRef.current) {
-        startRef.current = null;
-        rafRef.current = requestAnimationFrame(tick);
-        return;
-      }
-      if (startRef.current === null) startRef.current = t;
-      const elapsed = t - startRef.current;
-      const pct = Math.min((elapsed / STACK_DURATION) * 100, 100);
-      setProgress(pct);
-      if (pct >= 100) {
-        advance();
-      }
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    };
-  }, [advance, reduceMotion]);
-
-  const goTo = (i: number) => {
-    setActive(i);
-    setProgress(0);
-    startRef.current = null;
-  };
-
-  return (
-    <div
-      style={{ background: stackPalette.creamSoft, fontFamily: "'Georgia','Times New Roman',serif" }}
-      className="w-full py-20 px-5 md:px-8 rounded-2xl"
-    >
-      <div className="mx-auto" style={{ maxWidth: "1040px" }}>
-        <div className="grid md:grid-cols-[0.85fr_1.15fr] gap-14 items-center">
-          {/* ---------------- LEFT: intro copy ---------------- */}
-          <div>
-            <p
-              style={{
-                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                letterSpacing: "0.16em",
-                color: stackPalette.forest,
-                fontSize: "0.72rem",
-                fontWeight: 600,
-              }}
-            >
-              A THREE-PART VISIT
-            </p>
-            <h2
-              style={{ color: stackPalette.brownDeep, fontSize: "clamp(1.9rem, 3.4vw, 2.6rem)", lineHeight: 1.08 }}
-              className="mt-4 font-semibold"
-            >
-              Come for one. Stay for all three.
-            </h2>
-            <p style={{ color: stackPalette.ink, opacity: 0.75 }} className="mt-5 text-[1.02rem] leading-relaxed max-w-[30rem]">
-              Every visit moves through the same arc — hands-on participation,
-              knowledge passed down, and the forest itself as teacher.
-            </p>
-
-            {/* nav / index */}
-            <div className="mt-10 flex items-center gap-3">
-              {stackSteps.map((s, i) => (
-                <button
-                  key={s.num}
-                  onClick={() => goTo(i)}
-                  aria-label={`Show ${s.title}`}
-                  aria-current={active === i}
-                  className="relative flex items-center justify-center rounded-full transition-all duration-500"
-                  style={{
-                    width: active === i ? "2.5rem" : "2.1rem",
-                    height: active === i ? "2.5rem" : "2.1rem",
-                    border: `1px solid ${active === i ? stackPalette.forest : "rgba(46,32,22,0.25)"}`,
-                    background: active === i ? stackPalette.forest : "transparent",
-                    color: active === i ? stackPalette.cream : stackPalette.brown,
-                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                    fontSize: "0.72rem",
-                  }}
-                >
-                  {s.num}
-                  {active === i && !reduceMotion && (
-                    <svg
-                      viewBox="0 0 44 44"
-                      className="absolute -inset-[3px] pointer-events-none"
-                      style={{ transform: "rotate(-90deg)" }}
-                    >
-                      <circle
-                        cx="22"
-                        cy="22"
-                        r="20"
-                        fill="none"
-                        stroke={stackPalette.clay}
-                        strokeWidth="1.5"
-                        strokeDasharray={`${2 * Math.PI * 20}`}
-                        strokeDashoffset={`${2 * Math.PI * 20 * (1 - progress / 100)}`}
-                        style={{ transition: "stroke-dashoffset 60ms linear" }}
-                      />
-                    </svg>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ---------------- RIGHT: the stack ---------------- */}
-          <div
-            onMouseEnter={() => setPaused(true)}
-            onMouseLeave={() => setPaused(false)}
-            className="relative"
-            style={{ height: "340px", perspective: "1400px" }}
-          >
-            {stackSteps.map((s, i) => {
-              const depth = (i - active + STACK_TOTAL) % STACK_TOTAL;
-              const isFront = depth === 0;
-              const { Icon } = s;
-
-              const transforms = [
-                "translate3d(0px, 0px, 0px) scale(1) rotate(0deg)",
-                "translate3d(26px, 16px, -60px) scale(0.93) rotate(2.2deg)",
-                "translate3d(48px, 30px, -120px) scale(0.87) rotate(4deg)",
-              ][depth];
-
-              return (
-                <div
-                  key={s.num}
-                  onClick={() => !isFront && goTo(i)}
-                  className="absolute inset-0 rounded-2xl"
-                  style={{
-                    transform: transforms,
-                    zIndex: STACK_TOTAL - depth,
-                    cursor: isFront ? "default" : "pointer",
-                    transition: reduceMotion
-                      ? "none"
-                      : "transform 700ms cubic-bezier(0.22,1,0.36,1), opacity 700ms ease, box-shadow 700ms ease",
-                    background:
-                      depth === 0
-                        ? `linear-gradient(155deg, ${stackPalette.forest} 0%, ${stackPalette.forestDeep} 100%)`
-                        : stackPalette.brown,
-                    opacity: depth === 0 ? 1 : depth === 1 ? 0.9 : 0.65,
-                    boxShadow:
-                      depth === 0
-                        ? "0 30px 60px -20px rgba(11,58,31,0.45), 0 2px 0 rgba(255,255,255,0.06) inset"
-                        : "0 14px 30px -14px rgba(46,32,22,0.35)",
-                    border: `1px solid ${depth === 0 ? "rgba(247,240,226,0.14)" : "rgba(247,240,226,0.08)"}`,
-                  }}
-                >
-                  <div className="relative h-full w-full overflow-hidden rounded-2xl p-8 md:p-10 flex flex-col justify-between">
-                    {/* faint background numeral */}
-                    <span
-                      aria-hidden
-                      style={{
-                        position: "absolute",
-                        right: "0.4rem",
-                        top: "-1.4rem",
-                        fontSize: "9rem",
-                        fontWeight: 700,
-                        color: "rgba(247,240,226,0.06)",
-                        lineHeight: 1,
-                        userSelect: "none",
-                      }}
-                    >
-                      {s.num}
-                    </span>
-
-                    <div className="relative z-10 flex items-center justify-between">
-                      <span
-                        className="flex items-center justify-center rounded-full"
-                        style={{
-                          width: "2.6rem",
-                          height: "2.6rem",
-                          background: "rgba(247,240,226,0.12)",
-                          color: stackPalette.cream,
-                        }}
-                      >
-                        <Icon size={18} strokeWidth={1.8} />
-                      </span>
-                      <span
-                        style={{
-                          fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                          fontSize: "0.7rem",
-                          letterSpacing: "0.14em",
-                          color: "rgba(247,240,226,0.55)",
-                        }}
-                      >
-                        {s.num} / 0{STACK_TOTAL}
-                      </span>
-                    </div>
-
-                    <div className="relative z-10">
-                      <h3 style={{ color: stackPalette.cream, fontSize: "1.7rem" }} className="font-semibold leading-snug">
-                        {s.title}
-                      </h3>
-                      <p
-                        style={{ color: "rgba(247,240,226,0.8)" }}
-                        className="mt-3 text-[0.95rem] leading-relaxed max-w-[26rem]"
-                      >
-                        {s.copy}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* LOCAL DATA                                                          */
-/* ------------------------------------------------------------------ */
+const galleryImages = [
+  "/images/n1.jpeg",
+  "/images/n2.jpeg",
+  "/images/n3.jpeg",
+  "/images/n4.jpeg",
+  "/images/n5.jpeg",
+  "/images/n6.jpeg",
+];
 
 const featuredExperiences = [
   {
     icon: Users,
     tag: "Cultural Exchange",
     title: "Sit at the table first.",
-    detail: "Meals with Siddi families, where history is passed hand to hand — not printed in a guidebook.",
-    size: "lg",
+    detail:
+      "Meals with Siddi families, where history is passed hand to hand — not printed in a guidebook.",
+    size: "large",
   },
   {
     icon: TreePine,
     tag: "Forest Walks",
     title: "Follow paths that already know your name.",
-    detail: "Walk the forest with someone who reads it like a second language, generations deep.",
-    size: "md",
+    detail:
+      "Walk the forest with someone who reads it like a second language, generations deep.",
+    size: "medium",
   },
   {
     icon: Sprout,
     tag: "Sustainable Farming",
     title: "Get soil under your nails.",
-    detail: "Traditional and sustainable agriculture, learned by doing, not by watching.",
-    size: "md",
+    detail:
+      "Traditional and sustainable agriculture, learned by doing, not by watching.",
+    size: "medium",
   },
   {
     icon: Music,
     tag: "Music & Storytelling",
     title: "Songs kept for kinship, not for cameras.",
-    detail: "Traditional Siddi rhythm, dance and story — performed because it belongs, not because you asked.",
-    size: "lg",
+    detail:
+      "Traditional Siddi rhythm, dance and story — performed because it belongs, not because you asked.",
+    size: "large",
   },
   {
     icon: Utensils,
     tag: "Traditional Food",
     title: "Taste what the land actually gives.",
-    detail: "Recipes carried through generations, cooked the way they always have been.",
-    size: "sm",
+    detail:
+      "Recipes carried through generations, cooked the way they always have been.",
+    size: "small",
   },
   {
     icon: HomeIcon,
     tag: "Village Life",
     title: "A morning that isn't staged for you.",
-    detail: "The ordinary rhythm of a village day — which is the whole point.",
-    size: "sm",
+    detail:
+      "The ordinary rhythm of a village day — which is the whole point.",
+    size: "small",
   },
   {
     icon: BookOpen,
     tag: "Community Learning",
     title: "Knowledge that travels by voice.",
-    detail: "Understand how a community teaches, remembers and passes forward what it knows.",
-    size: "md",
+    detail:
+      "Understand how a community teaches, remembers and passes forward what it knows.",
+    size: "medium",
   },
   {
     icon: GraduationCap,
     tag: "Educational Visits",
     title: "Built for people who take notes.",
-    detail: "Structured field visits for students and researchers, grounded in real community life.",
-    size: "sm",
+    detail:
+      "Structured field visits for students and researchers, grounded in real community life.",
+    size: "small",
   },
 ];
 
 const dayWithHamche = [
-  { step: "ARRIVE", line: "Leave the usual itinerary behind." },
-  { step: "MEET", line: "Begin with people, not places." },
-  { step: "WALK", line: "Follow the forest paths with someone who knows them." },
-  { step: "LEARN", line: "Sit with knowledge that has never needed a classroom." },
-  { step: "EAT", line: "Food becomes another way of sharing memory." },
-  { step: "LISTEN", line: "Stories reveal what photographs cannot." },
-  { step: "SHARE", line: "Give something back to the conversation — your own." },
-  { step: "RETURN", line: "Leave with more than photographs." },
+  ["ARRIVE", "Leave the usual itinerary behind."],
+  ["MEET", "Begin with people, not places."],
+  ["WALK", "Follow the forest paths with someone who knows them."],
+  ["LEARN", "Sit with knowledge that has never needed a classroom."],
+  ["EAT", "Food becomes another way of sharing memory."],
+  ["LISTEN", "Stories reveal what photographs cannot."],
+  ["SHARE", "Give something back to the conversation — your own."],
+  ["RETURN", "Leave with more than photographs."],
 ];
 
 const curiousMinds = [
-  { label: "School & College Students" },
-  { label: "MSW Students" },
-  { label: "Agriculture & Environmental Science Students" },
-  { label: "Researchers & Academicians" },
-  { label: "NGOs & Community Groups" },
-  { label: "Cultural & Educational Groups" },
-];
-
-const galleryItems = [
-  { caption: "Morning on the forest trail", size: "lg" },
-  { caption: "Preparing the day's meal", size: "sm" },
-  { caption: "Hands in the soil", size: "sm" },
-  { caption: "An evening of music", size: "md" },
-  { caption: "Listening to the elders", size: "sm" },
-  { caption: "Field notes, taken slowly", size: "sm" },
-];
-
-const impactStats = [
-  { to: 12, suffix: "+", label: "Years rooted in the community" },
-  { to: 40, suffix: "+", label: "Villages engaged" },
-  { to: 2000, suffix: "+", label: "Visitors welcomed" },
-  { to: 100, suffix: "%", label: "Community-led programming" },
+  "School & College Students",
+  "MSW Students",
+  "Agriculture & Environmental Science Students",
+  "Researchers & Academicians",
+  "NGOs & Community Groups",
+  "Cultural & Educational Groups",
 ];
 
 const marqueeWords = [
@@ -488,124 +149,547 @@ const marqueeWords = [
   "Community Connection",
 ];
 
-// No confirmed events yet — component renders a proper empty state
-// rather than inventing dates. Add real events here as they're confirmed:
-// { date: "12 Dec 2026", name: "...", location: "...", description: "..." }
-const upcomingEvents: Array<{
-  date: string;
-  name: string;
-  location: string;
-  description: string;
-}> = [];
+const impactStats = [
+  ["12", "+", "Years rooted in the community"],
+  ["40", "+", "Villages engaged"],
+  ["2000", "+", "Visitors welcomed"],
+  ["100", "%", "Community-led programming"],
+];
 
-/* ------------------------------------------------------------------ */
-/* PAGE                                                                */
-/* ------------------------------------------------------------------ */
+function Reveal({
+  children,
+  delay = 0,
+  className = "",
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
 
-export default function Home() {
   useEffect(() => {
-    document.title = "Hamche Culture — Way Back to Real Life | Siddi Cultural Immersion";
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.12 }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
   }, []);
 
   return (
-    <>
-      {/* ============================================================ */}
-      {/* 1. HERO                                                       */}
-      {/* ============================================================ */}
-      <section className="ruled relative overflow-hidden bg-cream">
-        <ParallaxBlob speed={0.12} className="h-72 w-72 bg-forest/15 -top-10 -left-10" />
-        <ParallaxBlob speed={-0.08} className="h-96 w-96 bg-clay/10 top-20 right-0" />
-        <div
-          className="relative mx-auto px-5 md:px-8 pt-16 md:pt-24 pb-20 md:pb-28 grid md:grid-cols-[1.15fr_0.85fr] gap-12 items-center"
-          style={{ maxWidth: "1180px" }}
-        >
-          <div>
-            <p className="eyebrow text-forest mb-6">
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(24px)",
+        transition: `opacity 800ms ease ${delay}ms, transform 800ms cubic-bezier(.22,1,.36,1) ${delay}ms`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Counter({
+  value,
+  suffix,
+}: {
+  value: string;
+  suffix: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const target = Number(value);
+    if (!Number.isFinite(target)) {
+      setCurrent(0);
+      return;
+    }
+
+    let started = false;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting || started) return;
+
+        started = true;
+        const start = performance.now();
+        const duration = 1200;
+
+        const tick = (now: number) => {
+          const progress = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          setCurrent(Math.round(target * eased));
+
+          if (progress < 1) {
+            requestAnimationFrame(tick);
+          }
+        };
+
+        requestAnimationFrame(tick);
+        observer.disconnect();
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [value]);
+
+  return (
+    <span ref={ref}>
+      {current}
+      {suffix}
+    </span>
+  );
+}
+
+function Marquee({
+  tone = "clay",
+}: {
+  tone?: "clay" | "forest";
+}) {
+  const background =
+    tone === "forest" ? "bg-[#14532D]" : "bg-[#C46A3B]";
+
+  return (
+    <div
+      className={`overflow-hidden ${background} text-[#F7F0E2] py-4 -rotate-1 shadow-xl`}
+    >
+      <div className="flex w-max whitespace-nowrap animate-[marquee_28s_linear_infinite]">
+        {[...marqueeWords, ...marqueeWords, ...marqueeWords].map(
+          (word, index) => (
+            <span
+              key={`${word}-${index}`}
+              className="mx-6 flex items-center gap-6 font-serif text-lg md:text-xl uppercase tracking-wide"
+            >
+              {word}
+              <span className="text-[#F7F0E2]/50">✦</span>
+            </span>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StackLoop() {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActive((current) => (current + 1) % 3);
+    }, 4200);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const cards = [
+    {
+      number: "01",
+      title: "Experience",
+      copy:
+        "Come close enough to participate — in food, music, farming, stories and everyday village life.",
+      icon: Users,
+    },
+    {
+      number: "02",
+      title: "Learn",
+      copy:
+        "Move beyond observation. Learn the knowledge carried through generations, from agriculture and food to community and craft.",
+      icon: BookOpen,
+    },
+    {
+      number: "03",
+      title: "Connect with Nature",
+      copy:
+        "Walk the forest, understand the land, and see how nature shapes everyday life here.",
+      icon: TreePine,
+    },
+  ];
+
+  return (
+    <div className="rounded-[28px] bg-[#F0E6D2] px-5 py-16 md:px-10 md:py-20">
+      <div className="mx-auto grid max-w-[1040px] items-center gap-12 md:grid-cols-[.85fr_1.15fr]">
+        <div>
+          <p className="font-mono text-xs font-semibold tracking-[.16em] text-[#14532D]">
+            A THREE-PART VISIT
+          </p>
+
+          <h2 className="mt-4 font-serif text-4xl font-semibold leading-tight text-[#2E2016] md:text-5xl">
+            Come for one.
+            <br />
+            Stay for all three.
+          </h2>
+
+          <p className="mt-5 max-w-[30rem] text-base leading-relaxed text-[#2E2016]/75 md:text-lg">
+            Every visit moves through the same arc — hands-on participation,
+            knowledge passed down, and the forest itself as teacher.
+          </p>
+
+          <div className="mt-9 flex gap-3">
+            {cards.map((card, index) => (
+              <button
+                key={card.number}
+                type="button"
+                onClick={() => setActive(index)}
+                aria-label={`Show ${card.title}`}
+                aria-current={active === index}
+                className={`flex h-10 w-10 items-center justify-center rounded-full border text-xs font-semibold transition-all ${
+                  active === index
+                    ? "border-[#14532D] bg-[#14532D] text-[#F7F0E2]"
+                    : "border-[#2E2016]/25 text-[#5B4632]"
+                }`}
+              >
+                {card.number}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative h-[330px] sm:h-[350px]">
+          {cards.map((card, index) => {
+            const depth = (index - active + cards.length) % cards.length;
+            const Icon = card.icon;
+
+            const transform =
+              depth === 0
+                ? "translate3d(0,0,0) scale(1) rotate(0deg)"
+                : depth === 1
+                  ? "translate3d(24px,16px,-60px) scale(.93) rotate(2deg)"
+                  : "translate3d(46px,30px,-120px) scale(.87) rotate(4deg)";
+
+            return (
+              <button
+                key={card.number}
+                type="button"
+                onClick={() => setActive(index)}
+                className="absolute inset-0 w-full rounded-[24px] text-left"
+                style={{
+                  transform,
+                  zIndex: cards.length - depth,
+                  opacity: depth === 0 ? 1 : depth === 1 ? 0.9 : 0.65,
+                  transition:
+                    "transform 700ms cubic-bezier(.22,1,.36,1), opacity 700ms ease",
+                  background:
+                    depth === 0
+                      ? "linear-gradient(155deg,#14532D,#0B3A1F)"
+                      : "#5B4632",
+                  boxShadow:
+                    depth === 0
+                      ? "0 30px 60px -20px rgba(11,58,31,.45)"
+                      : "0 14px 30px -14px rgba(46,32,22,.35)",
+                }}
+              >
+                <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-[24px] p-7 md:p-9">
+                  <span className="pointer-events-none absolute -right-2 -top-7 font-sans text-[8rem] font-bold leading-none text-white/[.06]">
+                    {card.number}
+                  </span>
+
+                  <div className="relative z-10 flex items-center justify-between">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[.12] text-[#F7F0E2]">
+                      <Icon size={20} strokeWidth={1.8} />
+                    </span>
+
+                    <span className="font-mono text-xs tracking-[.14em] text-[#F7F0E2]/55">
+                      {card.number} / 03
+                    </span>
+                  </div>
+
+                  <div className="relative z-10">
+                    <h3 className="font-serif text-3xl font-semibold text-[#F7F0E2]">
+                      {card.title}
+                    </h3>
+                    <p className="mt-3 max-w-[27rem] text-sm leading-relaxed text-[#F7F0E2]/80 md:text-base">
+                      {card.copy}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PictureScroll() {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActive((current) => (current + 1) % galleryImages.length);
+    }, 3000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (
+    <section className="overflow-hidden bg-[#0B3A1F] py-16 md:py-24">
+      <div className="mx-auto max-w-[1500px] px-4 sm:px-6 lg:px-10">
+        <div className="relative h-[58vh] min-h-[420px] max-h-[760px]">
+          {galleryImages.map((src, index) => {
+            const distance =
+              (index - active + galleryImages.length) %
+              galleryImages.length;
+
+            let transform = "translateX(120%) scale(.82)";
+            let opacity = 0;
+            let zIndex = 1;
+
+            if (distance === 0) {
+              transform = "translateX(0) scale(1)";
+              opacity = 1;
+              zIndex = 10;
+            } else if (distance === 1) {
+              transform = "translateX(72%) scale(.86)";
+              opacity = 0.45;
+              zIndex = 5;
+            } else if (distance === galleryImages.length - 1) {
+              transform = "translateX(-72%) scale(.86)";
+              opacity = 0.45;
+              zIndex = 5;
+            }
+
+            return (
+              <div
+                key={src}
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  opacity,
+                  transform,
+                  zIndex,
+                  transition:
+                    "transform 900ms cubic-bezier(.22,1,.36,1), opacity 700ms ease",
+                }}
+              >
+                <div className="h-full w-full overflow-hidden rounded-[26px] border border-white/10 bg-black shadow-[0_35px_100px_rgba(0,0,0,.35)]">
+                  <img
+                    src={src}
+                    alt=""
+                    draggable={false}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-7 flex justify-center gap-2">
+          {galleryImages.map((src, index) => (
+            <button
+              key={src}
+              type="button"
+              onClick={() => setActive(index)}
+              aria-label={`Show gallery image ${index + 1}`}
+              className="h-1.5 rounded-full transition-all duration-500"
+              style={{
+                width: active === index ? 34 : 8,
+                background:
+                  active === index
+                    ? "#F7F0E2"
+                    : "rgba(247,240,226,.35)",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function Home() {
+  const [heroSlide, setHeroSlide] = useState(0);
+
+  useEffect(() => {
+    document.title =
+      "Hamche Culture — Way Back to Real Life | Siddi Cultural Immersion";
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setHeroSlide((current) => (current + 1) % heroImages.length);
+    }, 4000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return (
+    <main className="min-h-screen overflow-hidden bg-[#F7F0E2] text-[#2E2016]">
+      {/* ============================================================
+          1. HERO — LARGE RESPONSIVE TV DISPLAY
+      ============================================================ */}
+      <section className="relative overflow-hidden bg-[#F7F0E2]">
+        <div className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-[#14532D]/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-20 top-24 h-96 w-96 rounded-full bg-[#C46A3B]/10 blur-3xl" />
+
+        <div className="relative mx-auto grid max-w-[1550px] items-center gap-10 px-5 pb-16 pt-12 sm:px-7 sm:pb-20 sm:pt-16 lg:grid-cols-[.62fr_1.38fr] lg:gap-14 lg:px-10 lg:pb-24 lg:pt-20">
+          <div className="max-w-xl">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[.17em] text-[#14532D]">
               Hamche Culture — Field Notes from the Siddi Heartland
             </p>
-            <h1 className="font-display font-semibold text-brown-deep tracking-tight leading-[1.02]">
-              <span className="block" style={{ fontSize: "clamp(2.6rem, 6vw, 4.6rem)" }}>
+
+            <h1 className="mt-6 font-serif font-semibold leading-[.98] tracking-tight text-[#2E2016]">
+              <span
+                className="block"
+                style={{ fontSize: "clamp(2.8rem, 6vw, 5.5rem)" }}
+              >
                 WAY BACK TO
               </span>
-              <span className="block italic text-forest font-medium" style={{ fontSize: "clamp(2.6rem, 6vw, 4.6rem)" }}>
+              <span
+                className="block italic font-medium text-[#14532D]"
+                style={{ fontSize: "clamp(2.8rem, 6vw, 5.5rem)" }}
+              >
                 real life.
               </span>
             </h1>
-            <p className="mt-7 text-[1.05rem] leading-relaxed text-ink/80" style={{ maxWidth: "34rem" }}>
-              Step beyond the itinerary and into a living culture — where stories
-              are shared over food, knowledge travels through generations, and
-              the forest is not a backdrop, but part of everyday life.
+
+            <p className="mt-7 max-w-xl text-base leading-relaxed text-[#2E2016]/75 sm:text-lg">
+              Step beyond the itinerary and into a living culture — where
+              stories are shared over food, knowledge travels through
+              generations, and the forest is not a backdrop, but part of
+              everyday life.
             </p>
-            <p className="mt-5 eyebrow text-brown font-semibold tracking-wide">
+
+            <p className="mt-5 font-mono text-xs font-semibold uppercase tracking-[.12em] text-[#5B4632]">
               Experience. Learn. Connect with Nature.
             </p>
-            <div className="mt-9 flex flex-wrap items-center gap-4">
+
+            <div className="mt-8 flex flex-wrap items-center gap-4">
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2 bg-forest text-cream px-6 py-3.5 rounded-full font-semibold hover:bg-forest-deep transition-colors"
+                className="inline-flex items-center gap-2 rounded-full bg-[#14532D] px-6 py-3.5 font-semibold text-[#F7F0E2] transition hover:bg-[#0B3A1F]"
               >
-                Plan Your Visit <ArrowRight size={17} />
+                Plan Your Visit
+                <ArrowRight size={17} />
               </Link>
-              <Link href="/experiences" className="inline-flex items-center gap-2 text-brown-deep font-semibold underline-grow">
-                Explore Experiences <ArrowUpRight size={17} />
+
+              <Link
+                href="/experiences"
+                className="inline-flex items-center gap-2 font-semibold text-[#2E2016]"
+              >
+                Explore Experiences
+                <ArrowUpRight size={17} />
               </Link>
             </div>
           </div>
 
-          <div className="relative hidden md:block" style={{ height: "460px" }}>
-            <div
-              className="absolute rounded-2xl bg-forest-deep/90 overflow-hidden shadow-xl"
-              style={{ top: 0, left: "10%", width: "78%", height: "72%" }}
-            >
-              <div className="w-full h-full flex items-end p-5">
-                <span className="font-mono text-[0.65rem] uppercase tracking-widest text-cream-soft/70">
-                  Field photograph — village, morning
-                </span>
+          {/* Large TV */}
+          <div className="relative w-full">
+            <div className="pointer-events-none absolute -inset-5 rounded-[32px] bg-black/10 blur-2xl sm:-inset-7 lg:-inset-9" />
+
+            <div className="relative rounded-[24px] bg-[#151515] p-[6px] shadow-[0_40px_90px_rgba(0,0,0,.30)] sm:rounded-[30px] sm:p-2 lg:rounded-[36px] lg:p-[11px]">
+              <div className="pointer-events-none absolute inset-0 rounded-[24px] border border-white/10 sm:rounded-[30px] lg:rounded-[36px]" />
+
+              <div className="relative aspect-video w-full overflow-hidden rounded-[18px] bg-black sm:rounded-[22px] lg:rounded-[27px]">
+                {heroImages.map((src, index) => {
+                  const active = heroSlide === index;
+
+                  return (
+                    <div
+                      key={src}
+                      className="absolute inset-0"
+                      style={{
+                        opacity: active ? 1 : 0,
+                        transform: active ? "scale(1)" : "scale(1.08)",
+                        transition:
+                          "opacity 1000ms ease, transform 5000ms ease",
+                        zIndex: active ? 5 : 1,
+                      }}
+                    >
+                      <img
+                        src={src}
+                        alt=""
+                        draggable={false}
+                        className="h-full w-full select-none object-cover"
+                      />
+                    </div>
+                  );
+                })}
+
+                <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/25 via-transparent to-white/[.04]" />
+                <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-br from-white/[.10] via-transparent to-transparent" />
+
+                <div className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 sm:bottom-5">
+                  {heroImages.map((src, index) => (
+                    <button
+                      key={src}
+                      type="button"
+                      aria-label={`Show hero image ${index + 1}`}
+                      onClick={() => setHeroSlide(index)}
+                      className="h-1.5 rounded-full transition-all duration-500"
+                      style={{
+                        width: heroSlide === index ? 32 : 7,
+                        background:
+                          heroSlide === index
+                            ? "#F7F0E2"
+                            : "rgba(247,240,226,.5)",
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex h-5 items-center justify-center sm:h-6">
+                <div className="h-1 w-12 rounded-full bg-white/10 sm:w-16" />
               </div>
             </div>
-            <div
-              className="absolute rounded-2xl bg-clay/80 overflow-hidden shadow-lg border-4 border-cream"
-              style={{ bottom: 0, right: "6%", width: "48%", height: "42%" }}
-            >
-              <div className="w-full h-full flex items-end p-4">
-                <span className="font-mono text-[0.6rem] uppercase tracking-widest text-cream/80">
-                  Forest trail
-                </span>
-              </div>
+
+            <div className="relative flex justify-center">
+              <div className="h-5 w-24 rounded-b-xl bg-[#202020] shadow-lg sm:h-6 sm:w-32" />
             </div>
-            <div className="absolute -top-2 left-0">
-              <Stamp size={104} tone="forest" />
-            </div>
+
+            <div className="mx-auto h-2 w-40 rounded-full bg-black/20 blur-sm sm:w-56" />
+
           </div>
         </div>
       </section>
 
-      <Marquee items={marqueeWords} tone="clay" />
+      <Marquee tone="clay" />
 
-      <LeafDivider from="#F7F0E2" to="#14532D" />
-
-      {/* ============================================================ */}
-      {/* 2. BRAND STATEMENT                                            */}
-      {/* ============================================================ */}
-      <section className="relative bg-forest-deep text-cream-soft overflow-hidden">
-        <ParallaxBlob speed={0.1} className="h-64 w-64 bg-cream-soft/10 top-0 right-1/2 translate-x-1/2" />
-        <div className="relative mx-auto px-5 md:px-8 py-20 md:py-28 text-center" style={{ maxWidth: "880px" }}>
+      {/* ============================================================
+          2. BRAND STATEMENT
+      ============================================================ */}
+      <section className="relative overflow-hidden bg-[#0B3A1F] text-[#F7F0E2]">
+        <div className="mx-auto max-w-[900px] px-5 py-20 text-center sm:px-8 md:py-28">
           <Reveal>
-            <p className="font-display italic leading-[1.15]" style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)" }}>
+            <p
+              className="font-serif italic leading-[1.15]"
+              style={{ fontSize: "clamp(1.9rem, 4vw, 3rem)" }}
+            >
               Some places are visited.
               <br />
               Some places are lived.
             </p>
-            <p className="mt-8 text-[1.05rem] leading-relaxed text-cream-soft/85">
-              Hamche Culture creates opportunities to enter that second kind of
-              place — to meet people, participate in everyday life, listen to
-              stories, learn traditional knowledge, and understand the
+
+            <p className="mx-auto mt-8 max-w-3xl text-base leading-relaxed text-[#F7F0E2]/80 sm:text-lg">
+              Hamche Culture creates opportunities to enter that second kind
+              of place — to meet people, participate in everyday life, listen
+              to stories, learn traditional knowledge, and understand the
               relationship between{" "}
-              <span className="text-forest-light font-semibold">community</span>,{" "}
-              <span className="text-forest-light font-semibold">land</span> and{" "}
-              <span className="text-forest-light font-semibold">forest</span>.
+              <span className="font-semibold text-[#8CC7A0]">community</span>,{" "}
+              <span className="font-semibold text-[#8CC7A0]">land</span> and{" "}
+              <span className="font-semibold text-[#8CC7A0]">forest</span>.
             </p>
-            <div className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-3 font-mono text-xs tracking-[0.2em] uppercase text-cream-soft/60">
+
+            <div className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-3 font-mono text-xs uppercase tracking-[.2em] text-[#F7F0E2]/50">
               <span>People</span>
               <span>Place</span>
               <span>Knowledge</span>
@@ -615,109 +699,175 @@ export default function Home() {
         </div>
       </section>
 
-      <LeafDivider flip from="#F7F0E2" to="#14532D" />
-
-      {/* ============================================================ */}
-      {/* 3. FOUNDER / ORIGIN                                           */}
-      {/* ============================================================ */}
-      <section className="bg-cream">
-        <div
-          className="mx-auto px-5 md:px-8 py-20 md:py-28 grid md:grid-cols-[0.8fr_1.2fr] gap-12 items-center"
-          style={{ maxWidth: "1100px" }}
-        >
+      {/* ============================================================
+          3. FOUNDER
+      ============================================================ */}
+      <section className="bg-[#F7F0E2]">
+        <div className="mx-auto max-w-[900px] px-5 py-20 sm:px-8 md:py-28">
           <Reveal>
-            <div className="rounded-2xl bg-brown/90 overflow-hidden relative shadow-lg" style={{ aspectRatio: "4 / 5" }}>
-              <div className="absolute bottom-0 left-0 right-0 p-5">
-                <span className="font-mono text-[0.65rem] uppercase tracking-widest text-cream-soft/70">
-                  Portrait — Ramnath Siddi
-                </span>
-              </div>
-            </div>
-          </Reveal>
-          <Reveal delay={100}>
-            <p className="eyebrow text-forest mb-3">Founder &amp; Origin</p>
-            <h2 className="font-display font-semibold text-brown-deep" style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.6rem)" }}>
+            <p className="font-mono text-xs font-semibold uppercase tracking-[.16em] text-[#14532D]">
+              Founder &amp; Origin
+            </p>
+
+            <h2 className="mt-3 font-serif text-4xl font-semibold text-[#2E2016] md:text-6xl">
               Ramnath Siddi
             </h2>
-            <p className="mt-5 text-[1.02rem] leading-relaxed text-ink/80" style={{ maxWidth: "34rem" }}>
+
+            <p className="mt-6 max-w-3xl text-base leading-relaxed text-[#2E2016]/75 sm:text-lg md:text-xl">
               Hamche Culture grew from a desire to build a genuine bridge
               between the Siddi community and people who want to understand
-              its living heritage — not as spectators, but as guests.
-              Ramnath Siddi built it from inside that community, not outside
-              looking in.
+              its living heritage — not as spectators, but as guests. Ramnath
+              Siddi built it from inside that community, not outside looking
+              in.
             </p>
-            <blockquote className="mt-7 border-l-2 border-forest pl-5">
-              <p className="font-display italic text-lg text-brown-deep leading-relaxed">
-                &ldquo;Culture stays alive when it is lived, shared and passed forward.&rdquo;
+
+            <blockquote className="mt-8 max-w-3xl border-l-2 border-[#14532D] pl-5">
+              <p className="font-serif text-xl italic leading-relaxed text-[#2E2016] md:text-2xl">
+                “Culture stays alive when it is lived, shared and passed
+                forward.”
               </p>
-              <cite className="mt-3 block eyebrow text-brown not-italic">— Ramnath Siddi</cite>
+              <cite className="mt-3 block font-mono text-xs uppercase tracking-[.12em] text-[#5B4632] not-italic">
+                — Ramnath Siddi
+              </cite>
             </blockquote>
           </Reveal>
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* 4. EXPERIENCE / LEARN / CONNECT — interactive stack loop      */}
-      {/* ============================================================ */}
-      <section className="bg-cream-soft border-t hairline">
-        <div className="mx-auto px-5 md:px-8" style={{ maxWidth: "1180px" }}>
+      {/* ============================================================
+          4. EXPERIENCE / LEARN / CONNECT
+      ============================================================ */}
+      <section className="border-t border-[#2E2016]/10 bg-[#F0E6D2]">
+        <div className="mx-auto max-w-[1180px] px-5 py-10 sm:px-8 md:py-14">
           <Reveal>
             <StackLoop />
           </Reveal>
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* 5. FEATURED EXPERIENCES — asymmetric editorial grid           */}
-      {/* ============================================================ */}
-      <section className="bg-cream">
-        <div className="mx-auto px-5 md:px-8 py-20 md:py-28" style={{ maxWidth: "1180px" }}>
+      {/* ============================================================
+          5. FEATURED EXPERIENCES
+          Desktop: 3 x 3 card grid
+          Mobile: 1 column
+      ============================================================ */}
+      <section className="relative overflow-hidden bg-[#F7F0E2]">
+        {/* Decorative background geometry */}
+        <div className="pointer-events-none absolute -left-24 top-20 h-56 w-56 rounded-full border-[32px] border-[#14532D]/[.035]" />
+        <div className="pointer-events-none absolute right-[-80px] top-1/3 h-72 w-72 rotate-45 border border-[#C46A3B]/10" />
+        <div className="pointer-events-none absolute bottom-[-80px] left-1/3 h-44 w-44 rounded-full border-[18px] border-[#14532D]/[.035]" />
+
+        <div className="relative mx-auto max-w-[1240px] px-5 py-20 sm:px-8 md:py-28">
           <Reveal>
-            <div className="flex flex-wrap items-end justify-between gap-6 mb-12">
-              <div>
-                <p className="eyebrow text-forest mb-3">Featured Experiences</p>
-                <h2
-                  className="font-display font-semibold text-brown-deep"
-                  style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.6rem)", maxWidth: "32rem" }}
-                >
-                  Not a list of services. A life to step into.
+            <div className="mb-12 flex flex-col gap-5 sm:mb-14 sm:flex-row sm:items-end sm:justify-between">
+              <div className="max-w-3xl">
+                <p className="font-mono text-xs font-semibold uppercase tracking-[.18em] text-[#14532D]">
+                  Featured Experiences
+                </p>
+
+                <h2 className="mt-3 font-serif text-4xl font-semibold leading-[1.05] text-[#2E2016] sm:text-5xl md:text-6xl">
+                  Not a list of services.
+                  <br />
+                  <span className="italic text-[#14532D]">
+                    A life to step into.
+                  </span>
                 </h2>
               </div>
-              <Link href="/experiences" className="inline-flex items-center gap-2 font-semibold text-forest underline-grow shrink-0">
-                View all experiences <ArrowUpRight size={17} />
+
+              <Link
+                href="/experiences"
+                className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full border border-[#2E2016]/15 px-5 py-3 text-sm font-semibold text-[#2E2016] transition-all duration-300 hover:border-[#14532D] hover:bg-[#14532D] hover:text-[#F7F0E2]"
+              >
+                View all experiences
+                <ArrowUpRight size={16} />
               </Link>
             </div>
           </Reveal>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[220px]">
-            {featuredExperiences.map((exp, i) => {
-              const spanClass =
-                exp.size === "lg" ? "lg:col-span-2 lg:row-span-2" : exp.size === "md" ? "lg:row-span-2" : "";
+          {/* 3 x 3 desktop / 1 column mobile */}
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {featuredExperiences.map((experience, index) => {
+              const Icon = experience.icon;
+
+              const geometricShapes = [
+                "rounded-full",
+                "rotate-45 rounded-[10px]",
+                "rounded-full",
+                "rotate-12 rounded-[8px]",
+                "rounded-full",
+                "rotate-45 rounded-full",
+                "rounded-[8px]",
+                "rounded-full",
+              ];
+
+              const shapeColors = [
+                "bg-[#C46A3B]",
+                "bg-[#8CC7A0]",
+                "bg-[#F7F0E2]",
+                "bg-[#C46A3B]",
+                "bg-[#8CC7A0]",
+                "bg-[#F7F0E2]",
+                "bg-[#C46A3B]",
+                "bg-[#8CC7A0]",
+              ];
+
               return (
-                <Reveal key={exp.title} delay={i * 60}>
-                  <div
-                    className={`group relative h-full rounded-2xl overflow-hidden border hairline bg-brown-deep/95 hover:-translate-y-1 transition-all duration-300 ${spanClass}`}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-t from-brown-deep via-brown-deep/40 to-transparent" />
-                    <div className="relative z-10 h-full flex flex-col justify-between p-6">
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center justify-center w-9 h-9 rounded-full bg-cream/15 text-cream">
-                          <exp.icon size={17} strokeWidth={1.8} />
-                        </span>
-                        <ArrowUpRight
-                          size={17}
-                          className="text-cream/60 group-hover:text-cream group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <span className="font-mono text-[0.65rem] uppercase tracking-widest text-cream-soft/60">
-                          {exp.tag}
-                        </span>
-                        <h3 className="mt-2 font-display text-lg text-cream font-semibold leading-snug">{exp.title}</h3>
-                        <p className="mt-2 text-sm leading-relaxed text-cream-soft/75">{exp.detail}</p>
-                      </div>
+                <Reveal
+                  key={experience.title}
+                  delay={index * 55}
+                  className="h-full"
+                >
+                  <article className="group relative h-full min-h-[390px] overflow-hidden rounded-[26px] border border-[#2E2016]/10 bg-[#F0E6D2] p-7 shadow-[0_12px_35px_rgba(46,32,22,.07)] transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_24px_55px_rgba(46,32,22,.13)] sm:min-h-[410px] sm:p-8">
+                    {/* Geometric decorations */}
+                    <div
+                      className={`pointer-events-none absolute -right-10 -top-10 h-28 w-28 ${geometricShapes[index]} ${shapeColors[index]} opacity-20 transition-all duration-700 group-hover:scale-125 group-hover:rotate-[70deg]`}
+                    />
+
+                    <div
+                      className={`pointer-events-none absolute -bottom-10 -left-10 h-24 w-24 border-[14px] border-[#14532D]/10 ${index % 2 === 0 ? "rounded-full" : "rotate-45 rounded-[8px]"} transition-transform duration-700 group-hover:rotate-[65deg] group-hover:scale-110`}
+                    />
+
+                    <div className="pointer-events-none absolute right-7 top-24 grid grid-cols-2 gap-1 opacity-20">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#14532D]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#14532D]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#14532D]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#14532D]" />
                     </div>
-                  </div>
+
+                    {/* Card number */}
+                    <div className="relative z-10 flex items-start justify-between">
+                      <span className="font-mono text-[11px] font-bold tracking-[.18em] text-[#C46A3B]">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-[#2E2016]/10 bg-[#F7F0E2] text-[#14532D] shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-[#14532D] group-hover:text-[#F7F0E2]">
+                        <Icon size={19} strokeWidth={1.7} />
+                      </span>
+                    </div>
+
+                    <div className="relative z-10 mt-16">
+                      <span className="font-mono text-[10px] font-semibold uppercase tracking-[.17em] text-[#14532D]">
+                        {experience.tag}
+                      </span>
+
+                      <h3 className="mt-3 max-w-sm font-serif text-2xl font-semibold leading-[1.08] text-[#2E2016] sm:text-[1.75rem]">
+                        {experience.title}
+                      </h3>
+
+                      <p className="mt-4 max-w-sm text-sm leading-7 text-[#2E2016]/65">
+                        {experience.detail}
+                      </p>
+                    </div>
+
+                    <div className="absolute bottom-7 left-7 right-7 flex items-center justify-between border-t border-[#2E2016]/10 pt-4">
+                      <span className="font-mono text-[9px] uppercase tracking-[.15em] text-[#2E2016]/35">
+                        Hamche Culture
+                      </span>
+
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#2E2016]/10 text-[#2E2016]/45 transition-all duration-300 group-hover:border-[#14532D] group-hover:bg-[#14532D] group-hover:text-[#F7F0E2]">
+                        <ArrowUpRight size={14} />
+                      </span>
+                    </div>
+                  </article>
                 </Reveal>
               );
             })}
@@ -725,32 +875,34 @@ export default function Home() {
         </div>
       </section>
 
-      <LeafDivider from="#F7F0E2" to="#14532D" />
-
-      {/* ============================================================ */}
-      {/* 6. A DAY WITH HAMCHE                                          */}
-      {/* ============================================================ */}
-      <section className="bg-forest-deep text-cream-soft">
-        <div className="mx-auto px-5 md:px-8 py-20 md:py-28" style={{ maxWidth: "1000px" }}>
+      {/* ============================================================
+          6. A DAY WITH HAMCHE
+      ============================================================ */}
+      <section className="bg-[#0B3A1F] text-[#F7F0E2]">
+        <div className="mx-auto max-w-[1000px] px-5 py-20 sm:px-8 md:py-28">
           <Reveal>
-            <p className="eyebrow text-forest-light mb-3 text-center">A Day With Hamche</p>
-            <h2 className="font-display font-semibold text-center" style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.6rem)" }}>
+            <p className="text-center font-mono text-xs font-semibold uppercase tracking-[.16em] text-[#8CC7A0]">
+              A Day With Hamche
+            </p>
+
+            <h2 className="mt-3 text-center font-serif text-4xl font-semibold md:text-5xl">
               What a visit actually feels like.
             </h2>
           </Reveal>
 
-          <div className="mt-14 grid gap-0" style={{ borderLeft: "2px solid rgba(247,240,226,0.2)" }}>
-            {dayWithHamche.map((d, i) => (
-              <Reveal key={d.step} delay={i * 60}>
-                <div className="relative pl-8 pb-10 last:pb-0" style={{ marginLeft: "-2px" }}>
-                  <span
-                    className="absolute rounded-full bg-forest-light"
-                    style={{ left: "-6px", top: "4px", width: "10px", height: "10px" }}
-                  />
-                  <span className="font-mono text-xs tracking-[0.2em] uppercase text-cream-soft/50">
-                    {String(i + 1).padStart(2, "0")} — {d.step}
+          <div className="mt-14 border-l-2 border-[#F7F0E2]/15">
+            {dayWithHamche.map(([step, line], index) => (
+              <Reveal key={step} delay={index * 45}>
+                <div className="relative pb-10 pl-8 last:pb-0">
+                  <span className="absolute -left-[6px] top-1 h-2.5 w-2.5 rounded-full bg-[#8CC7A0]" />
+
+                  <span className="font-mono text-xs uppercase tracking-[.18em] text-[#F7F0E2]/45">
+                    {String(index + 1).padStart(2, "0")} — {step}
                   </span>
-                  <p className="mt-1.5 font-display text-lg md:text-xl text-cream-soft leading-snug">{d.line}</p>
+
+                  <p className="mt-1.5 max-w-2xl font-serif text-lg leading-snug text-[#F7F0E2] sm:text-xl">
+                    {line}
+                  </p>
                 </div>
               </Reveal>
             ))}
@@ -758,42 +910,47 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* IMPACT STATS STRIP                                            */}
-      {/* ============================================================ */}
-      <section className="bg-brown-deep text-cream-soft">
-        <div className="mx-auto px-5 md:px-8 py-14 grid grid-cols-2 md:grid-cols-4 gap-8 text-center" style={{ maxWidth: "1100px" }}>
-          {impactStats.map((s, i) => (
-            <Reveal key={s.label} delay={i * 80}>
-              <p className="font-display text-4xl md:text-5xl font-semibold text-clay">
-                <Counter to={s.to} suffix={s.suffix} />
+      {/* ============================================================
+          7. IMPACT STATS
+      ============================================================ */}
+      <section className="bg-[#2E2016] text-[#F7F0E2]">
+        <div className="mx-auto grid max-w-[1100px] grid-cols-2 gap-8 px-5 py-14 text-center sm:px-8 md:grid-cols-4">
+          {impactStats.map(([value, suffix, label], index) => (
+            <Reveal key={label} delay={index * 60}>
+              <p className="font-serif text-4xl font-semibold text-[#C46A3B] md:text-5xl">
+                <Counter value={value} suffix={suffix} />
               </p>
-              <p className="mt-2 text-sm text-cream-soft/70">{s.label}</p>
+              <p className="mt-2 text-sm text-[#F7F0E2]/65">{label}</p>
             </Reveal>
           ))}
         </div>
       </section>
 
-      <LeafDivider flip from="#F7F0E2" to="#14532D" />
-
-      {/* ============================================================ */}
-      {/* 7. WHO CAN JOIN                                               */}
-      {/* ============================================================ */}
-      <section className="bg-cream">
-        <div className="mx-auto px-5 md:px-8 py-20 md:py-28" style={{ maxWidth: "1100px" }}>
+      {/* ============================================================
+          8. WHO CAN JOIN
+      ============================================================ */}
+      <section className="bg-[#F7F0E2]">
+        <div className="mx-auto max-w-[1100px] px-5 py-20 sm:px-8 md:py-28">
           <Reveal>
-            <p className="eyebrow text-forest mb-3">Who Can Join</p>
-            <h2 className="font-display font-semibold text-brown-deep max-w-2xl" style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.6rem)" }}>
+            <p className="font-mono text-xs font-semibold uppercase tracking-[.16em] text-[#14532D]">
+              Who Can Join
+            </p>
+
+            <h2 className="mt-3 max-w-2xl font-serif text-4xl font-semibold text-[#2E2016] md:text-5xl">
               Made for curious minds.
             </h2>
           </Reveal>
 
-          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-brown/15 border hairline rounded-2xl overflow-hidden">
-            {curiousMinds.map((a, i) => (
-              <Reveal key={a.label} delay={i * 60}>
-                <div className="group bg-cream-soft h-full p-7 transition-all duration-300 hover:bg-forest/5">
-                  <span className="font-mono text-xs text-clay">{String(i + 1).padStart(2, "0")}</span>
-                  <p className="mt-3 font-display text-lg text-brown-deep leading-snug">{a.label}</p>
+          <div className="mt-12 grid overflow-hidden rounded-[22px] border border-[#2E2016]/10 bg-[#2E2016]/10 sm:grid-cols-2 lg:grid-cols-3">
+            {curiousMinds.map((item, index) => (
+              <Reveal key={item} delay={index * 45}>
+                <div className="h-full bg-[#F0E6D2] p-7 transition hover:bg-[#14532D]/5">
+                  <span className="font-mono text-xs text-[#C46A3B]">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <p className="mt-3 font-serif text-lg leading-snug text-[#2E2016]">
+                    {item}
+                  </p>
                 </div>
               </Reveal>
             ))}
@@ -801,115 +958,159 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* 8. GALLERY                                                    */}
-      {/* ============================================================ */}
-      <section className="bg-cream-soft border-t hairline">
-        <div className="mx-auto px-5 md:px-8 py-20 md:py-28" style={{ maxWidth: "1180px" }}>
+      {/* ============================================================
+          9. N1-N6 PICTURE SCROLL
+      ============================================================ */}
+      <PictureScroll />
+
+      <Marquee tone="forest" />
+
+      {/* ============================================================
+          10. UPCOMING
+      ============================================================ */}
+      <section className="bg-[#F7F0E2]">
+        <div className="mx-auto max-w-[1000px] px-5 py-20 sm:px-8 md:py-28">
           <Reveal>
-            <p className="eyebrow text-forest mb-3">Gallery</p>
-            <h2 className="font-display font-semibold text-brown-deep max-w-xl" style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.6rem)" }}>
-              Moments from the field.
+            <p className="font-mono text-xs font-semibold uppercase tracking-[.16em] text-[#14532D]">
+              Upcoming
+            </p>
+
+            <h2 className="mt-3 max-w-xl font-serif text-4xl font-semibold text-[#2E2016] md:text-5xl">
+              What’s happening next.
             </h2>
           </Reveal>
 
-          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[160px]">
-            {galleryItems.map((g, i) => {
-              const spanClass = g.size === "lg" ? "col-span-2 row-span-2" : g.size === "md" ? "row-span-2" : "";
-              return (
-                <Reveal key={g.caption} delay={i * 50}>
-                  <div className={`group relative h-full rounded-xl overflow-hidden bg-brown/80 ${spanClass}`}>
-                    <div className="absolute inset-0 bg-gradient-to-t from-brown-deep/90 via-transparent to-transparent transition-opacity duration-300 group-hover:opacity-80" />
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <span className="font-mono text-[0.6rem] uppercase tracking-widest text-cream-soft/75">
-                        {g.caption}
-                      </span>
-                    </div>
-                  </div>
-                </Reveal>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+          <Reveal delay={100}>
+            <div className="mt-12 rounded-[22px] border border-[#2E2016]/10 bg-[#F0E6D2] p-10 text-center md:p-14">
+              <CalendarDays
+                size={28}
+                className="mx-auto text-[#14532D]"
+                strokeWidth={1.5}
+              />
 
-      <Marquee items={marqueeWords} tone="forest" />
-
-      {/* ============================================================ */}
-      {/* 9. UPCOMING EVENTS                                            */}
-      {/* ============================================================ */}
-      <section className="bg-cream border-t hairline">
-        <div className="mx-auto px-5 md:px-8 py-20 md:py-28" style={{ maxWidth: "1000px" }}>
-          <Reveal>
-            <p className="eyebrow text-forest mb-3">Upcoming</p>
-            <h2 className="font-display font-semibold text-brown-deep max-w-xl" style={{ fontSize: "clamp(1.9rem, 3.5vw, 2.6rem)" }}>
-              What&rsquo;s happening next.
-            </h2>
-          </Reveal>
-
-          {upcomingEvents.length > 0 ? (
-            <div className="mt-12 grid sm:grid-cols-2 gap-6">
-              {upcomingEvents.map((e) => (
-                <div key={e.name} className="border hairline rounded-2xl p-7 bg-cream-soft">
-                  <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-clay">
-                    <CalendarDays size={14} /> {e.date}
-                  </span>
-                  <h3 className="mt-3 font-display text-xl text-brown-deep font-semibold">{e.name}</h3>
-                  <span className="mt-1 inline-flex items-center gap-1.5 text-sm text-ink/60">
-                    <MapPin size={13} /> {e.location}
-                  </span>
-                  <p className="mt-3 text-sm leading-relaxed text-ink/70">{e.description}</p>
-                  <Link href="/events" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-forest underline-grow">
-                    View Event <ArrowUpRight size={14} />
-                  </Link>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-12 border hairline rounded-2xl p-10 md:p-14 text-center bg-cream-soft">
-              <p className="font-display italic text-lg text-brown-deep">Nothing on the calendar just yet.</p>
-              <p className="mt-2 text-sm text-ink/60">
-                New dates are added as they&rsquo;re confirmed with the community.
+              <p className="mt-5 font-serif text-xl italic text-[#2E2016]">
+                Nothing on the calendar just yet.
               </p>
-              <Link href="/contact" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-forest underline-grow">
-                Get notified <ArrowUpRight size={14} />
+
+              <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-[#2E2016]/60">
+                New dates are added as they’re confirmed with the community.
+              </p>
+
+              <Link
+                href="/contact"
+                className="mt-6 inline-flex items-center gap-2 font-semibold text-[#14532D]"
+              >
+                Get notified
+                <ArrowUpRight size={15} />
               </Link>
             </div>
-          )}
+          </Reveal>
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* 10. FINAL CTA                                                 */}
-      {/* ============================================================ */}
-      <section className="relative bg-brown-deep text-cream-soft overflow-hidden">
-        <ParallaxBlob speed={0.15} className="h-80 w-80 bg-forest-light/10 -bottom-20 -right-10" />
-        <div className="relative mx-auto px-5 md:px-8 py-20 md:py-28 text-center" style={{ maxWidth: "800px" }}>
+      {/* ============================================================
+          11. FINAL CTA
+      ============================================================ */}
+      <section className="relative overflow-hidden bg-[#2E2016] text-[#F7F0E2]">
+        <div className="pointer-events-none absolute -bottom-32 -right-20 h-96 w-96 rounded-full bg-[#14532D]/25 blur-3xl" />
+
+        <div className="relative mx-auto max-w-[800px] px-5 py-20 text-center sm:px-8 md:py-28">
           <Reveal>
-            <p className="font-display font-semibold" style={{ fontSize: "clamp(1.9rem, 4vw, 2.8rem)" }}>
+            <p className="font-serif text-4xl font-semibold md:text-6xl">
               Come closer.
             </p>
-            <p className="mt-6 font-display italic text-lg md:text-xl leading-relaxed text-cream-soft/85">
+
+            <p className="mt-6 font-serif text-lg italic leading-relaxed text-[#F7F0E2]/80 md:text-xl">
               Not as a tourist.
               <br />
               As a guest. As a learner.
               <br />
               As someone willing to listen.
             </p>
+
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2 bg-forest-light text-brown-deep px-7 py-4 rounded-full font-semibold hover:bg-cream transition-colors"
+                className="inline-flex items-center gap-2 rounded-full bg-[#8CC7A0] px-7 py-4 font-semibold text-[#2E2016] transition hover:bg-[#F7F0E2]"
               >
-                Plan Your Visit <ArrowRight size={17} />
+                Plan Your Visit
+                <ArrowRight size={17} />
               </Link>
-              <Link href="/experiences" className="inline-flex items-center gap-2 text-cream-soft font-semibold underline-grow">
-                Explore Experiences <ArrowUpRight size={17} />
+
+              <Link
+                href="/experiences"
+                className="inline-flex items-center gap-2 font-semibold text-[#F7F0E2]"
+              >
+                Explore Experiences
+                <ArrowUpRight size={17} />
               </Link>
             </div>
           </Reveal>
         </div>
       </section>
-    </>
+
+      {/* ============================================================
+          FOOTER SPACING
+      ============================================================ */}
+      <div className="h-2 bg-[#14532D]" />
+
+      {/* ============================================================
+          FLOATING WHATSAPP + CALL BUTTONS
+      ============================================================ */}
+      <div className="fixed bottom-5 right-5 z-[100] flex flex-col items-end gap-3 sm:bottom-7 sm:right-7">
+        {/* Call */}
+        <a
+          href="tel:+917349016519"
+          aria-label="Call Hamche Culture"
+          className="group relative flex items-center gap-3"
+        >
+          <span className="pointer-events-none absolute right-full mr-3 hidden whitespace-nowrap rounded-full bg-[#2E2016] px-4 py-2 text-xs font-semibold text-[#F7F0E2] shadow-xl sm:block opacity-0 translate-x-2 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
+            Call Us
+          </span>
+
+          <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-[#F7F0E2] text-[#14532D] shadow-[0_10px_35px_rgba(46,32,22,.22)] ring-1 ring-[#14532D]/15 transition-all duration-300 group-hover:-translate-y-1 group-hover:scale-105 group-hover:bg-[#14532D] group-hover:text-[#F7F0E2]">
+            <span className="absolute inset-0 rounded-full border border-[#14532D]/20 animate-ping opacity-20" />
+            <svg
+              viewBox="0 0 24 24"
+              className="relative h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92Z" />
+            </svg>
+          </span>
+        </a>
+
+        {/* WhatsApp */}
+        <a
+          href="https://wa.me/917349016519?text=Hello%20Hamche%20Culture%2C%20I%20would%20like%20to%20know%20more%20about%20your%20experiences."
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Chat with Hamche Culture on WhatsApp"
+          className="group relative flex items-center gap-3"
+        >
+          <span className="pointer-events-none absolute right-full mr-3 hidden whitespace-nowrap rounded-full bg-[#2E2016] px-4 py-2 text-xs font-semibold text-[#F7F0E2] shadow-xl sm:block opacity-0 translate-x-2 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
+            WhatsApp Us
+          </span>
+
+          <span className="relative flex h-[62px] w-[62px] items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_12px_40px_rgba(37,211,102,.35)] ring-4 ring-[#F7F0E2] transition-all duration-300 group-hover:-translate-y-1 group-hover:scale-110">
+            <span className="absolute inset-[-5px] rounded-full border-2 border-[#25D366]/40 animate-ping opacity-30" />
+
+            <svg
+              viewBox="0 0 24 24"
+              className="relative h-8 w-8"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M20.52 3.48A11.78 11.78 0 0 0 12.08 0C5.53 0 .2 5.32.2 11.87c0 2.09.55 4.13 1.59 5.92L.1 24l6.35-1.66a11.86 11.86 0 0 0 5.63 1.43h.01c6.55 0 11.88-5.33 11.88-11.88 0-3.17-1.24-6.15-3.45-8.41ZM12.09 21.74h-.01a9.84 9.84 0 0 1-5.02-1.37l-.36-.21-3.77.99 1.01-3.67-.23-.38a9.84 9.84 0 0 1-1.51-5.23C2.2 6.44 6.63 2 12.09 2c2.64 0 5.12 1.03 6.98 2.9a9.84 9.84 0 0 1 2.9 7c0 5.44-4.43 9.84-9.88 9.84Zm5.41-7.37c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.76-1.66-2.06-.17-.3-.02-.46.13-.61.14-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.21 5.09 4.5.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.08 1.77-.72 2.02-1.41.25-.69.25-1.28.17-1.41-.07-.12-.27-.2-.57-.35Z" />
+            </svg>
+          </span>
+        </a>
+      </div>
+    </main>
   );
 }
